@@ -2,56 +2,49 @@ import { useState, useEffect } from "react";
 import { useFetcher, useLoaderData } from "react-router";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
+import { useNavigate } from "react-router";
+
 
 export const loader = async ({ request }) => {
   await authenticate.admin(request);
-  
   const settings = await prisma.settings.findFirst();
-  
-  return {
-    settings: settings || {
-      whatsappToken: "",
-      phoneNumberId: "",
-      orderConfirmationMessage: "Order Confirmed! Hello {customerName}! Order ID: {orderName}. Items: {items}. Total: {total}. Payment: Cash on Delivery. Thank you for shopping with Zantac Solution!",
-      orderConfirmationEnabled: true,
-    }
-  };
+  return { settings };
 };
 
 export const action = async ({ request }) => {
   await authenticate.admin(request);
-  
   const formData = await request.formData();
   
+
   const data = {
     whatsappToken: formData.get("whatsappToken"),
     phoneNumberId: formData.get("phoneNumberId"),
     orderConfirmationMessage: formData.get("orderConfirmationMessage"),
     orderConfirmationEnabled: formData.get("orderConfirmationEnabled") === "true",
   };
-  
+
   const existing = await prisma.settings.findFirst();
-  
   if (existing) {
-    await prisma.settings.update({
-      where: { id: existing.id },
-      data,
-    });
+    await prisma.settings.update({ where: { id: existing.id }, data });
   } else {
     await prisma.settings.create({ data });
   }
-  
+
   return { success: true };
 };
 
 export default function Settings() {
   const { settings } = useLoaderData();
   const fetcher = useFetcher();
+  const navigate = useNavigate();
+  const currentPath = "/app/settings";
+
   
-  const [token, setToken] = useState(settings.whatsappToken || "");
-  const [phoneId, setPhoneId] = useState(settings.phoneNumberId || "");
-  const [message, setMessage] = useState(settings.orderConfirmationMessage || "");
-  const [enabled, setEnabled] = useState(settings.orderConfirmationEnabled ?? true);
+
+  const [token, setToken] = useState(settings?.whatsappToken || "");
+  const [phoneId, setPhoneId] = useState(settings?.phoneNumberId || "");
+  const [message, setMessage] = useState(settings?.orderConfirmationMessage || "");
+  const [enabled, setEnabled] = useState(settings?.orderConfirmationEnabled ?? true);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -61,9 +54,39 @@ export default function Settings() {
     }
   }, [fetcher.data]);
 
+
+const nav = [
+  { label: "📊 Dashboard", href: "/app" },
+  { label: "💬 Custom Message", href: "/app/custom-message" },
+  { label: "📋 Tracking Orders", href: "/app/tracking" },
+  { label: "⚙️ Settings", href: "/app/settings" },
+];
+
   return (
-    <div style={{ maxWidth: "800px", margin: "0 auto", padding: "20px", fontFamily: "Arial, sans-serif" }}>
-      
+    <div style={{ maxWidth: "800px", margin: "0 auto", padding: "24px", fontFamily: "Arial, sans-serif" }}>
+
+      {/* Navigation */}
+   <div style={{ display: "flex", gap: "8px", marginBottom: "24px", borderBottom: "2px solid #e1e3e5", paddingBottom: "16px" }}>
+  {nav.map((item) => (
+    <button
+      key={item.href}
+      onClick={() => navigate(item.href)}
+      style={{
+        padding: "8px 16px",
+        borderRadius: "6px",
+        fontWeight: "bold",
+        fontSize: "14px",
+     background: item.href === currentPath ? "#008060" : "#f6f6f7",
+color: item.href === currentPath ? "white" : "#333",
+border: item.href === currentPath ? "1px solid #008060" : "1px solid #e1e3e5",
+        cursor: "pointer"
+      }}
+    >
+      {item.label}
+    </button>
+  ))}
+</div>
+
       <h1 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "8px" }}>
         ⚙️ WhatsApp Settings
       </h1>
@@ -78,13 +101,13 @@ export default function Settings() {
       )}
 
       <fetcher.Form method="post">
-        
+
         {/* API Settings */}
         <div style={{ background: "white", border: "1px solid #ddd", borderRadius: "8px", padding: "24px", marginBottom: "20px" }}>
           <h2 style={{ fontSize: "18px", fontWeight: "bold", marginBottom: "20px" }}>
             📱 WhatsApp API Settings
           </h2>
-          
+
           <div style={{ marginBottom: "16px" }}>
             <label style={{ display: "block", fontWeight: "bold", marginBottom: "6px" }}>
               WhatsApp Token
@@ -160,7 +183,6 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* Save Button */}
         <button
           type="submit"
           style={{ background: "#008060", color: "white", border: "none", padding: "12px 32px", borderRadius: "6px", fontSize: "16px", fontWeight: "bold", cursor: "pointer", width: "100%" }}
