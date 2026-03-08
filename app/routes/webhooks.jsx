@@ -94,6 +94,7 @@ import prisma from "../db.server";
 
 // Track active timers to prevent duplicate messages for same cart
 const activeTimers = new Set();
+const processedOrders = new Set();
 
 export const action = async ({ request }) => {
   const { topic, shop, payload } = await authenticate.webhook(request);
@@ -128,6 +129,13 @@ export const action = async ({ request }) => {
         : "Not provided";
 
       console.log("📱 Phone:", phone);
+      if (processedOrders.has(orderName)) {
+        console.log(`⏭️ Order ${orderName} already processed, skipping duplicate`);
+        break;
+      }
+      processedOrders.add(orderName);
+      // Auto-remove after 30 seconds
+      setTimeout(() => processedOrders.delete(orderName), 30000);
 
       if (phone) {
         await sendWhatsAppMessage(phone, orderName, customerName, { items, total, address }, shop);
